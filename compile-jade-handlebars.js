@@ -8,6 +8,7 @@ var handler = function(compileStep) {
     return;
 
   // Variables
+  var lineno = 0;
   var lines = [];
   var json = [];
   var handlebarsPattern = /\s*(\{\{.*(?!\{\{)\}\})/;
@@ -21,18 +22,17 @@ var handler = function(compileStep) {
     // Parse the file content until the end
     while(!ss.endOfString()){
       // Scan content per line
-      var res = ss.scan(/^(\s*)(.*)\n*/);
+      var res = ss.scan(/^(\s*)(.*)$\n*/m);
       if (typeof res === "undefined" || res === null) {
-        console.log("failed to scan!", compileStep.inputPath);
+        console.log("Parsing failed at", compileStep.inputPath, ":", lineno);
         break
       }
+      lineno = lineno + res.split(/\r\n|\r|\n/).length;
 
       // Get the indentation of the line
-      var captures = ss.captures() || [];
-      var first = captures[0] || '';
-      indent = first.length;
+      var indent = ss.captures()[0].length;
       // Get the content of the line
-      value = captures[1] || '';
+      value = ss.captures()[1];
 
       // Variables for json
       var child = [];
@@ -42,10 +42,8 @@ var handler = function(compileStep) {
       ss_line = new StringScanner(value);  
       ss_line.reset();
       while(ss_line.checkUntil(handlebarsPattern)){
-        captures = ss_line.captures() || [];
-        first = captures[0] || '';
         ss_line.scanUntil(handlebarsPattern);
-        tags.push({"position": ss_line.pointer()-first.length, "value": first});
+        tags.push({"position": ss_line.pointer()-ss_line.captures()[0].length, "value": ss_line.captures()[0] });
       }
       // End scan
       ss_line.terminate();
@@ -74,9 +72,8 @@ var handler = function(compileStep) {
   } catch(err) {
     // XXX better error handling, once the Plugin interface support it
     throw err
-    console.log("Error: ", err.toSource());
     throw new Error(
-      compileStep.inputPath + ':' +
+      compileStep.inputPath + ':' + lineno + ":" +
       err.message
     );
 
