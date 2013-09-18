@@ -20,17 +20,18 @@ var handler = function(compileStep) {
     var ss = new StringScanner(compileStep.read().toString('utf8'));
     ss.reset();
     // Parse the file content until the end
+    var EOL = "(?:\r\n|\r|\n)";
     while(!ss.endOfString()){
       // Scan content per line
-      var res = ss.scan(/^(\s*)(.*)$\n*/m);
+      var res = ss.scan(new RegExp(EOL + "*^([\t ]*)(.*)$" + EOL + "*", 'm'));
       if (typeof res === "undefined" || res === null) {
         console.log("Parsing failed at", compileStep.inputPath, ":", lineno);
         break
       }
-      lineno = lineno + res.split(/\r\n|\r|\n/).length;
-
+      lineno = lineno + res.split(new RegExp(EOL)).length;
       // Get the indentation of the line
       var indent = ss.captures()[0].length;
+      
       // Get the content of the line
       value = ss.captures()[1];
 
